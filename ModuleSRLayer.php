@@ -24,18 +24,6 @@ class ModuleSRLayer extends \Module
 	 */
 	protected $arrTargets = array();
 
-	/**
-	 * Options for JS
-	 * @var array
-	 */
-	protected $optionsArr = array();
-
-	/**
-	* show files and layer
-	* @var bool
-	*/
-	protected $show = false;
-
 
 	/**
 	 * Display a wildcard in the back end
@@ -67,48 +55,43 @@ class ModuleSRLayer extends \Module
 	 */
 	protected function compile()
 	{
-
-		//sucht in den Get-Keys nach einer bestimmten Teil-Zeichenkette
-		$pos = false;
-
-		if(count($_GET)>0)
-		{
-	       foreach($_GET AS $k => $v)
-			{
-				$k = strip_tags(trim($k));
-				$getPos = strcmp($k,$this->srl_substr)==0 ? true : false;
-			}
-		}
-
-		//test Start-Date
+		// test start date
 		if(strlen($this->srl_start) && ($this->srl_start > time()))
 		{
 			return false;
 		}
 
-		//test Stop-Date
+		// test stop date
 		if(strlen($this->srl_stop) && ($this->srl_stop < time()))
 		{
 			return false;
 		}
 
-		//Modul-Flag fuer "keine Parameter notwendig" pruefen
-		if($this->srl_no_param || $getPos)
-		{
-			$this->optionsArr[] = 'showNow: true';
-			$this->show = true;
-		}
+		// show at all?
+		$showHtml = false;
 
+		// show right away?
+		$showNow = false;
+
+		// array for javascript options
+		$optionsArr = array();
+
+		// no GET params necessary?
+		if($this->srl_no_param)
+		{
+			$showHtml = true;
+			$showNow = true;
+		}
 
 		//Modul-Flag fuer "Layer per Link öffnen" pruefen
 		if($this->srl_set_mkLinkEvents)
 		{
-			$this->optionsArr[] = 'mkLinkEvents: true';
-			$this->show = true;
+			$showHtml = true;
+			$optionsArr[] = 'mkLinkEvents: true';
 		}
 
-		//Cookie
-		if($this->srl_set_cookie && $this->show)
+		// check for cookie
+		if($this->srl_set_cookie && $showHtml)
 		{
 			//Name des Cookies
 			if(!$this->srl_cookie_name) $this->srl_cookie_name = 'LAYER_'.$this->id.'_COOKIE';
@@ -118,11 +101,11 @@ class ModuleSRLayer extends \Module
 				if(!$this->srl_cookie_dauer) $this->srl_cookie_dauer = 3600;
 				$this->setCookie( $this->srl_cookie_name, 1, time() + $this->srl_cookie_dauer );
 
-			}else $this->show = false;
+			} else $showHtml = false;
 		}
 
-		//Session
-		if($this->srl_set_session && $this->show)
+		// check for session
+		if($this->srl_set_session && $showHtml)
 		{
 			$this->import('Session');
 			$this->srl_session_name = 'LAYER_'.$this->id.'_SESSION';
@@ -131,33 +114,44 @@ class ModuleSRLayer extends \Module
 			{
 				$this->Session->set($this->srl_session_name,'1');
 
-			}else $this->show = false;
+			} else $showHtml = false;
 		}
 
-		// nur wenn Fund dann CSS, JS und HTML einfuegen
-		if($this->show)
+		// check for GET parameter and override showing
+		if( strlen($this->srl_substr) > 0 )
+		{
+			if( \Input::get($this->srl_substr) !== null )
+			{
+				$showHtml = true;
+				$showNow = true;
+			}
+		}
+
+		// only insert HTML, CSS and JS if showHtml was true
+		if($showHtml)
 		{
 			$layerName = $this->srl_substr;
 
-			if(is_numeric($this->srl_option_layerwidth)) $this->optionsArr[] = 'layerWidth:'.$this->srl_option_layerwidth;
-			if(is_numeric($this->srl_option_layerheight)) $this->optionsArr[] = 'layerHeight:'.$this->srl_option_layerheight;
+			if($showNow) $optionsArr[] = 'showNow: true';
+			if(is_numeric($this->srl_option_layerwidth)) $optionsArr[] = 'layerWidth:'.$this->srl_option_layerwidth;
+			if(is_numeric($this->srl_option_layerheight)) $optionsArr[] = 'layerHeight:'.$this->srl_option_layerheight;
 
 			//expert options
 			if($this->srl_set_jsoptions == 1)
 			{
-				if(strlen($this->srl_set_overLayID)) $this->optionsArr[] = "overLayID:'".$this->srl_set_overLayID."'";
-				if(strlen($this->srl_set_layerID)) $this->optionsArr[] = "layerID:'".$this->srl_set_layerID."'";
-				if(strlen($this->srl_set_closeID)) $this->optionsArr[] = "closeID:'".$this->srl_set_closeID."'";
-				if(strlen($this->srl_set_closeClass)) $this->optionsArr[] = "closeClass:'".$this->srl_set_closeClass."'";
-				if(strlen($this->srl_set_overLayOpacity)) $this->optionsArr[] = 'overLayOpacity:'.$this->srl_set_overLayOpacity;
-				if(strlen($this->srl_set_duration)) $this->optionsArr[] = 'duration:'.$this->srl_set_duration;
-				if(!$this->srl_set_closePerEsc) $this->optionsArr[] = 'closePerEsc:false';
-				if(!$this->srl_set_closePerLayerClick) $this->optionsArr[] = 'closePerLayerClick:false';
-				if(!$this->srl_set_drawLayerCenterX) $this->optionsArr[] = 'drawLayerCenterX:false';
-				if(!$this->srl_set_drawLayerCenterY) $this->optionsArr[] = 'drawLayerCenterY:false';
+				if(strlen($this->srl_set_overLayID)) $optionsArr[] = "overLayID:'".$this->srl_set_overLayID."'";
+				if(strlen($this->srl_set_layerID)) $optionsArr[] = "layerID:'".$this->srl_set_layerID."'";
+				if(strlen($this->srl_set_closeID)) $optionsArr[] = "closeID:'".$this->srl_set_closeID."'";
+				if(strlen($this->srl_set_closeClass)) $optionsArr[] = "closeClass:'".$this->srl_set_closeClass."'";
+				if(strlen($this->srl_set_overLayOpacity)) $optionsArr[] = 'overLayOpacity:'.$this->srl_set_overLayOpacity;
+				if(strlen($this->srl_set_duration)) $optionsArr[] = 'duration:'.$this->srl_set_duration;
+				if(!$this->srl_set_closePerEsc) $optionsArr[] = 'closePerEsc:false';
+				if(!$this->srl_set_closePerLayerClick) $optionsArr[] = 'closePerLayerClick:false';
+				if(!$this->srl_set_drawLayerCenterX) $optionsArr[] = 'drawLayerCenterX:false';
+				if(!$this->srl_set_drawLayerCenterY) $optionsArr[] = 'drawLayerCenterY:false';
 			}
 
-			$jsOptions = implode(', ',$this->optionsArr);
+			$jsOptions = implode(', ',$optionsArr);
 
 			//eigene CSS-Auszeichnungen aus CSS-Datei			
 			if($this->srl_css_file)
@@ -197,7 +191,7 @@ class ModuleSRLayer extends \Module
 			else $GLOBALS['TL_MOOTOOLS'][] = '<script type="text/javascript"> window.addEvent(\'domready\', function() { var ml = new  myLayer( { '.$jsOptions.', '.$this->srl_option_other.' } ); });</script>';
 
 			$this->Template->content = $this->srl_content;
-			$this->Template->showLayerHtml = $this->show;
+			$this->Template->showLayerHtml = $showHtml;
 			$this->Template->hideOverlay = ($this->srl_hideOverlay == 1) ? true : false;
 		}
 
