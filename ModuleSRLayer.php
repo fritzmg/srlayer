@@ -118,13 +118,10 @@ class ModuleSRLayer extends \Module
 		}
 
 		// check for GET parameter and override showing
-		if( strlen($this->srl_substr) > 0 )
+		if( $this->srl_substr ? \Input::get($this->srl_substr) !== null : false )
 		{
-			if( \Input::get($this->srl_substr) !== null )
-			{
-				$showHtml = true;
-				$showNow = true;
-			}
+			$showHtml = true;
+			$showNow = true;
 		}
 
 		// only insert HTML, CSS and JS if showHtml was true
