@@ -177,11 +177,11 @@ class ModuleSRLayer extends \Module
 				
 			}
 			
-			$GLOBALS['TL_CSS'][] = ($cssPath) ? $cssPath : $GLOBALS['SRL_CSS'].'?'.time();
+			$GLOBALS['TL_CSS'][] = ($cssPath) ? $cssPath : $GLOBALS['SRL_CSS'];
 
 			foreach($GLOBALS['SRL_JS']['mootools'] as $jsSource)
 			{
-				$GLOBALS['TL_JAVASCRIPT'][] = $jsSource.'?'.time();
+				$GLOBALS['TL_JAVASCRIPT'][] = $jsSource;
 			}
 
 			if((int) $this->srl_delay > 0) $GLOBALS['TL_MOOTOOLS'][] = '<script type="text/javascript"> window.addEvent(\'domready\', function() { var ml = new  myLayer( { '.$jsOptions.', '.$this->srl_option_other.' } ); }.delay('.$this->srl_delay.'));</script>';
