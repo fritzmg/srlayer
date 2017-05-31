@@ -70,47 +70,43 @@ class ModuleSRLayer extends \Module
 	{
 		global $objPage;
 
-		//sucht in den Get-Keys nach einer bestimmten Teil-Zeichenkette
-		$pos = false;
-
-		if(count($_GET)>0)
-		{
-	       foreach($_GET AS $k => $v)
-			{
-				$k = strip_tags(trim($k));
-				$getPos = strcmp($k,$this->srl_substr)==0 ? true : false;
-			}
-		}
-
-		//test Start-Date
+		// test start date
 		if(strlen($this->srl_start) && ($this->srl_start > time()))
 		{
 			return false;
 		}
 
-		//test Stop-Date
+		// test stop date
 		if(strlen($this->srl_stop) && ($this->srl_stop < time()))
 		{
 			return false;
 		}
 
-		//Modul-Flag fuer "keine Parameter notwendig" pruefen
-		if($this->srl_no_param || $getPos)
-		{
-			$this->optionsArr[] = 'showNow: true';
-			$this->show = true;
-		}
+		// show at all?
+		$showHtml = false;
 
+		// show right away?
+		$showNow = false;
+
+		// array for javascript options
+		$optionsArr = array();
+
+		// no GET params necessary?
+		if($this->srl_no_param)
+		{
+			$showHtml = true;
+			$showNow = true;
+		}
 
 		//Modul-Flag fuer "Layer per Link öffnen" pruefen
 		if($this->srl_set_mkLinkEvents)
 		{
-			$this->optionsArr[] = 'mkLinkEvents: true';
-			$this->show = true;
+			$showHtml = true;
+			$optionsArr[] = 'mkLinkEvents: true';
 		}
 
-		//Cookie
-		if($this->srl_set_cookie && $this->show)
+		// check for cookie
+		if($this->srl_set_cookie && $showHtml)
 		{
 			//Name des Cookies
 			if(!$this->srl_cookie_name) $this->srl_cookie_name = 'LAYER_'.$this->id.'_COOKIE';
@@ -120,11 +116,11 @@ class ModuleSRLayer extends \Module
 				if(!$this->srl_cookie_dauer) $this->srl_cookie_dauer = 3600;
 				$this->setCookie( $this->srl_cookie_name, 1, time() + $this->srl_cookie_dauer );
 
-			}else $this->show = false;
+			} else $showHtml = false;
 		}
 
-		//Session
-		if($this->srl_set_session && $this->show)
+		// check for session
+		if($this->srl_set_session && $showHtml)
 		{
 			$this->import('Session');
 			$this->srl_session_name = 'LAYER_'.$this->id.'_SESSION';
@@ -133,14 +129,22 @@ class ModuleSRLayer extends \Module
 			{
 				$this->Session->set($this->srl_session_name,'1');
 
-			}else $this->show = false;
+			} else $showHtml = false;
 		}
 
-		// nur wenn Fund dann CSS, JS und HTML einfuegen
-		if($this->show)
+		// check for GET parameter and override showing
+		if( $this->srl_substr ? \Input::get($this->srl_substr) !== null : false )
+		{
+			$showHtml = true;
+			$showNow = true;
+		}
+
+		// only insert HTML, CSS and JS if showHtml was true
+		if($showHtml)
 		{
 			$layerName = $this->srl_substr;
 
+			if($showNow) $this->optionsArr[] = 'showNow: true';
 			if(is_numeric($this->srl_option_layerwidth)) $this->optionsArr[] = 'layerWidth:'.$this->srl_option_layerwidth;
 			if(is_numeric($this->srl_option_layerheight)) $this->optionsArr[] = 'layerHeight:'.$this->srl_option_layerheight;
 
@@ -171,15 +175,15 @@ class ModuleSRLayer extends \Module
 				if(!$this->srl_set_drawLayerCenterY) $this->optionsArr[] = 'drawLayerCenterY:false';
 			}
 
-			$jsOptions = implode(', ',$this->optionsArr);
+			$jsOptions = implode(', ',$optionsArr);
 
-			//eigene CSS-Auszeichnungen aus CSS-Datei
+			//eigene CSS-Auszeichnungen aus CSS-Datei			
 			if($this->srl_css_file)
 			{
 				$cssObjFile = \FilesModel::findByPk($this->srl_css_file);
 
 				if(version_compare(VERSION, '3.2','>='))
-				{
+				{					
 					if ($cssObjFile === null)
 					{
 						if (!Validator::isUuid($this->srl_css_file))
@@ -187,15 +191,15 @@ class ModuleSRLayer extends \Module
 						    $this->log($GLOBALS['TL_LANG']['ERR']['version2format'],'ModuleSRLayer.php srl_css_file','TL_ERROR');
 						}
 					}
-					$cssPath = $cssObjFile->path;
+					$cssPath = $cssObjFile->path;					
 				}
 				elseif(version_compare(VERSION, '3.2','<'))
-				{
+				{					
 					$cssPath = $cssObjFile->path;
 				}
-
+				
 			}
-
+			
 			$GLOBALS['TL_CSS'][] = ($cssPath) ? $cssPath : $GLOBALS['SRL_CSS'];
 
 			//wenn jQuery aktiviert ist dann jQuery (vorrangig)
@@ -242,7 +246,7 @@ class ModuleSRLayer extends \Module
 			}
 
 			$this->Template->content = $this->srl_content;
-			$this->Template->showLayerHtml = $this->show;
+			$this->Template->showLayerHtml = $showHtml;
 			$this->Template->hideOverlay = ($this->srl_hideOverlay == 1) ? true : false;
 		}
 
