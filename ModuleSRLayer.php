@@ -7,6 +7,7 @@
  *
  * @copyright  sr-tag 2014
  * @author     Sven Rhinow <support@sr-tag.de>
+ * @author     Fritz Michael Gschwantner <fmg@inspiredminds.at>
  * @package    srlayer
  */
 class ModuleSRLayer extends \Module
